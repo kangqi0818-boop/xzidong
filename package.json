@@ -1,0 +1,33 @@
+{
+  "name": "x-ins",
+  "version": "2.0.0",
+  "description": "Daily horoscope generator + multi-platform publisher with Web UI",
+  "type": "module",
+  "main": "dist/server.js",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/server.ts",
+    "start": "node dist/server.js",
+    "cli": "tsx src/index.ts"
+  },
+  "license": "ISC",
+  "devDependencies": {
+    "@types/cors": "^2.0.0",
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.0.0",
+    "@types/node-cron": "^3.0.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "cors": "^2.0.0",
+    "dotenv": "^16.0.0",
+    "express": "^4.0.0",
+    "node-cron": "^3.0.0",
+    "openai": "^4.0.0",
+    "playwright": "^1.61.0",
+    "playwright-extra": "^4.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2"
+  }
+}
