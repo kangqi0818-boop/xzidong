@@ -143,8 +143,17 @@ async function main() {
     if (posts && posts.length > 0) {
       const post = posts.find((p: any) => p.hour === targetHour);
       if (post?.texts?.en) {
-        // Post English only (global audience)
-        text = post.texts.en;
+        // Post English only, truncate to X safe limit
+        let rawText = post.texts.en;
+        // Remove the date header line for X (it's format metadata)
+        rawText = rawText.replace(/^📅.*?
+
+/, "");
+        text = rawText;
+        if (text.length > 250) {
+          console.log("  ⚠️  Post too long (" + text.length + " chars), truncating to 250");
+          text = text.substring(0, 247) + "...";
+        }
         console.log("  ✅ Found post for hour " + targetHour + " (" + (post.zodiacs || []).join(", ") + " | " + text.length + " chars)");
       }
     }
