@@ -1,4 +1,8 @@
 node_modules/
 dist/
-.env
+config.json
+x-session/
+.horoscope-chrome/
+generated-posts.json
 *.log
+.DS_Store
