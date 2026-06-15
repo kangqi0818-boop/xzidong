@@ -137,6 +137,20 @@ async function runGeneration() {
       } catch (e: any) { generationLog.push({ time: new Date().toISOString(), hour: h, status: "failed: " + e.message }); }
     }
     for (const p of generatedPosts) savePostToDoc(p, []);
+    // Auto-export for GitHub Actions
+    const { writeFileSync } = await import("fs");
+    const exportPayload = {
+      generatedAt: new Date().toISOString(),
+      targetDate,
+      posts: generatedPosts.map(p => ({
+        hour: p.hour,
+        zodiacs: p.zodiacs,
+        tarotCards: p.tarotCards,
+        texts: p.texts,
+      })),
+    };
+    writeFileSync("generated-posts.json", JSON.stringify(exportPayload, null, 2));
+    console.log("✅ exported generated-posts.json");
     scheduleAutoPost();
   } catch (e) { console.error(e); }
   finally { isGenerating = false; isPaused = false; abortController = null; }
