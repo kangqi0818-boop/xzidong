@@ -27,7 +27,7 @@ async function postTweet(text: string): Promise<{ success: boolean; id?: string;
       longform_notetweets_inline_media_enabled: true,
       responsive_web_text_conversations_enabled: false,
       tweet_with_visibility_results_prefer_gql_limited_actions_policy_enabled: false,
-      vibe_api_enabled: false,
+      vibe_api_enabled: true,
       rweb_tipjar_consumption_enabled: true,
       responsive_web_graphql_exclude_directive_enabled: true,
       verified_phone_label_enabled: false,
@@ -42,6 +42,12 @@ async function postTweet(text: string): Promise<{ success: boolean; id?: string;
       tweet_with_visibility_results_prefer_gql_media_interstitial_enabled: true,
       responsive_web_media_download_video_enabled: false,
       responsive_web_enhance_cards_enabled: false,
+      rweb_video_timestamps_enabled: false,
+      premium_content_enabled: true,
+    },
+    // Premium long-form tweet support
+    fieldToggles: {
+      article: false,
     },
     queryId: "a1p9RWpkYKBjWv_I3WzS-A",
   });
@@ -137,12 +143,9 @@ async function main() {
     if (posts && posts.length > 0) {
       const post = posts.find((p: any) => p.hour === targetHour);
       if (post?.texts?.en) {
-        // Only post English (global audience), truncate to X limit (280 chars)
+        // Post English only (global audience)
         text = post.texts.en;
-        if (text.length > 280) {
-          text = text.substring(0, 270) + "...";
-        }
-        console.log("  ✅ Found post for hour " + targetHour + " (" + (post.zodiacs || []).join(", ") + ")");
+        console.log("  ✅ Found post for hour " + targetHour + " (" + (post.zodiacs || []).join(", ") + " | " + text.length + " chars)");
       }
     }
   } catch {}
