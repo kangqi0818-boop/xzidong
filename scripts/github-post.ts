@@ -146,9 +146,7 @@ async function main() {
         // Post English only, truncate to X safe limit
         let rawText = post.texts.en;
         // Remove the date header line for X (it's format metadata)
-        rawText = rawText.replace(/^📅.*?
-
-/, "");
+        rawText = rawText.replace(/^📅[\s\S]*?\n\n/, "");
         text = rawText;
         if (text.length > 250) {
           console.log("  ⚠️  Post too long (" + text.length + " chars), truncating to 250");
