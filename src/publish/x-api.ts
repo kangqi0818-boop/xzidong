@@ -104,11 +104,20 @@ export async function postToXWithCookies(text: string): Promise<XCookiePost> {
 
     try {
       const data = JSON.parse(respText);
-      const tweetId = data?.data?.create_tweet?.tweet_results?.result?.rest_id;
+      // Try multiple possible paths
+      let tweetId = data?.data?.create_tweet?.tweet_results?.result?.rest_id;
+      if (!tweetId) tweetId = data?.data?.create_tweet?.tweet_results?.result?.tweet?.rest_id;
+      if (!tweetId) tweetId = data?.rest_id || data?.id_str || data?.id;
+
       if (tweetId) {
         return { success: true, id: tweetId };
       }
-      return { success: false, error: "无法解析推文ID: " + respText.substring(0, 200) };
+      
+      if (data.errors && data.errors.length > 0) {
+        return { success: false, error: data.errors[0].message || "API error" };
+      }
+      
+      return { success: false, error: "Response OK but no tweet ID: " + respText.substring(0, 200) };
     } catch {
       return { success: true }; // Posted but couldn't parse ID
     }

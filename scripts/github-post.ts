@@ -1,22 +1,18 @@
 // GitHub Actions posting script — runs on schedule without browser
 // Uses X auth cookies to post via X's internal API
 
-// Get tokens from environment (GitHub Secrets) or local config
 const AUTH_TOKEN = process.env.X_AUTH_TOKEN || "";
 const CT0 = process.env.X_CT0 || "";
-const DEEPSEEK_KEY = process.env.DEEPSEEK_API_KEY || "";
 
 // X's internal GraphQL API for creating tweets
 const CREATE_TWEET_URL = "https://x.com/i/api/graphql/a1p9RWpkYKBjWv_I3WzS-A/CreateTweet";
 
-// X web app Bearer token (shared across all X web clients)
 const X_WEB_BEARER = process.env.X_WEB_BEARER || 
   "Bearer AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA";
 
-// ─── Post helper ──────────────────────────────────────
 async function postTweet(text: string): Promise<{ success: boolean; id?: string; error?: string }> {
   if (!AUTH_TOKEN || !CT0) {
-    return { success: false, error: "Missing X_AUTH_TOKEN or X_CT0 environment variables" };
+    return { success: false, error: "Missing X_AUTH_TOKEN or X_CT0" };
   }
 
   const body = JSON.stringify({
@@ -69,44 +65,60 @@ async function postTweet(text: string): Promise<{ success: boolean; id?: string;
     });
 
     const respText = await res.text();
+    console.log("  HTTP Status:", res.status);
+    console.log("  Response preview:", respText.substring(0, 300));
     
     if (!res.ok) {
       let errMsg = `HTTP ${res.status}`;
       try {
         const errJson = JSON.parse(respText);
-        errMsg = errJson.errors?.[0]?.message || errMsg;
+        errMsg = errJson.errors?.[0]?.message || errJson.error || errMsg;
       } catch {}
       return { success: false, error: errMsg };
     }
 
     try {
       const data = JSON.parse(respText);
-      const tweetId = data?.data?.create_tweet?.tweet_results?.result?.rest_id;
-      return { success: true, id: tweetId };
-    } catch {
-      return { success: false, error: "Parse error: " + respText.substring(0, 200) };
+
+      // Try multiple possible paths for the tweet ID
+      let tweetId = data?.data?.create_tweet?.tweet_results?.result?.rest_id;
+
+      if (!tweetId) {
+        // Try alternative response format
+        tweetId = data?.data?.create_tweet?.tweet_results?.result?.tweet?.rest_id;
+      }
+      if (!tweetId) {
+        // Try legacy format
+        tweetId = data?.rest_id || data?.id_str || data?.id;
+      }
+
+      if (tweetId) {
+        return { success: true, id: tweetId };
+      }
+
+      // No tweet ID found - dump full response for debugging
+      console.log("  FULL RESPONSE:", respText.substring(0, 500));
+      
+      // Check if there's an error in the response
+      if (data.errors && data.errors.length > 0) {
+        return { success: false, error: data.errors[0].message || "API error" };
+      }
+      
+      return { success: false, error: "Response OK but no tweet ID found" };
+    } catch (parseErr: any) {
+      return { success: false, error: "JSON parse error: " + parseErr.message };
     }
   } catch (err: any) {
     return { success: false, error: err.message };
   }
 }
 
-// ─── Main ────────────────────────────────────────────
 async function main() {
   console.log("🚀 GitHub Actions — Horoscope Auto-Post");
-  console.log("Time:", new Date().toISOString());
+  console.log("  Time:", new Date().toISOString());
 
   if (!AUTH_TOKEN || !CT0) {
-    console.log("❌ 未配置 X_AUTH_TOKEN 或 X_CT0");
-    console.log("   请在 GitHub 仓库 Settings → Secrets → Actions 中添加:");
-    console.log("   - X_AUTH_TOKEN: 你的 X auth_token cookie");
-    console.log("   - X_CT0: 你的 X ct0 cookie");
-    console.log("   - DEEPSEEK_API_KEY: (可选) DeepSeek API Key");
-    console.log("");
-    console.log("   如何获取 cookies:");
-    console.log("   1. 打开 Chrome，登录 x.com");
-    console.log("   2. F12 → Application → Cookies → x.com");
-    console.log("   3. 复制 auth_token 和 ct0 的值");
+    console.log("❌ Missing X_AUTH_TOKEN or X_CT0");
     process.exit(1);
   }
 
@@ -114,47 +126,36 @@ async function main() {
   const currentHour = new Date().getUTCHours();
   const targetHour = hour >= 0 ? hour : currentHour;
 
-  console.log(`📅 Target hour: ${targetHour}:00 UTC`);
+  console.log("  Target hour:", targetHour + ":00 UTC");
 
-  // In GitHub Actions, we need to either generate content or use pre-generated
-  // For MVP: post a simple test message
-  // Full integration: generate content using DeepSeek, then post
-  
-  // Try loading local generated posts if available
+  // Try loading pre-generated posts
   let text = "";
   try {
     const { readFileSync } = await import("fs");
-    const configPath = "./config.json";
-    const config = JSON.parse(readFileSync(configPath, "utf-8"));
-    
-    // Check if we have pre-generated posts
-    const postsPath = "./generated-posts.json";
-    try {
-      const posts = JSON.parse(readFileSync(postsPath, "utf-8"));
+    const postsRaw = readFileSync("./generated-posts.json", "utf-8");
+    const { posts } = JSON.parse(postsRaw);
+    if (posts && posts.length > 0) {
       const post = posts.find((p: any) => p.hour === targetHour);
-      if (post && post.texts?.en) {
+      if (post?.texts?.en) {
         text = post.texts.en;
-        console.log("✅ Found pre-generated post for hour " + targetHour);
+        console.log("  ✅ Found post for hour " + targetHour + " (" + (post.zodiacs || []).join(", ") + ")");
       }
-    } catch {
-      console.log("No pre-generated posts file, generating...");
     }
   } catch {}
 
   if (!text) {
-    // Generate a simple post
-    text = `🔮 Hourly Horoscope — ${targetHour}:00 UTC\n\nStay tuned for your daily cosmic guidance! ✨`;
-    console.log("ℹ️  Using default post (no pre-generated content found)");
+    text = `🔮 Hourly Horoscope — ${targetHour}:00 UTC\n\n✨ Your cosmic energy update for this hour. Stay aligned! ✨`;
+    console.log("  ℹ️  Using default post");
   }
 
-  console.log("📤 Posting to X...");
+  console.log("  📤 Posting (" + text.length + " chars)...");
   const result = await postTweet(text);
 
   if (result.success) {
-    console.log(`✅ Posted! Tweet ID: ${result.id || "unknown"}`);
+    console.log("  ✅ SUCCESS! Tweet ID:", result.id);
     process.exit(0);
   } else {
-    console.log(`❌ Failed: ${result.error}`);
+    console.log("  ❌ FAILED:", result.error);
     process.exit(1);
   }
 }
