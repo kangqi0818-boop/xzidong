@@ -6,7 +6,7 @@ import { resolve } from "path";
 import { loadConfig, saveConfig, AppConfig } from "./config-store.js";
 import { getCurrentAstroSnapshot, buildAstroContext, getHourEnergy } from "./astro/ephemeris.js";
 import { buildTarotDeck, buildKnowledgeContext, getZodiacInfo, ZODIAC_SIGNS } from "./data/knowledge-base.js";
-import { generatePost, GeneratedPost } from "./generate/engine.js";
+import { generatePost, GeneratedPost, generateForDateAndZodiacs } from "./generate/engine.js";
 import { publishToInstagramPost } from "./publish/instagram.js";
 import { publishToThreadsPost } from "./publish/threads.js";
 import { savePostToDoc, PublishResult } from "./fallback/doc-writer.js";
@@ -19,16 +19,16 @@ app.use(express.json());
 app.use(express.static(resolve(process.cwd(), "public")));
 
 let generatedPosts: GeneratedPost[] = [];
-let generationLog: { time: string; hour: number; status: string }[] = [];
+let generationLog: { time: string; zodiac: string; status: string }[] = [];
 let abortController: AbortController | null = null;
 let isPaused = false, isGenerating = false;
 let targetDate = "";
-let cronJobs: Map<number, cron.ScheduledTask> = new Map();
+let cronJobs: Map<string, cron.ScheduledTask> = new Map();
 let autoPostEnabled = false;
-let autoPostLog: { time: string; hour: number; platform: string; status: string }[] = [];
+let autoPostLog: { time: string; id: string; platform: string; status: string }[] = [];
 let pkceVerifier: string | null = null;
 let pkceState: string | null = null;
-let publishedTweets: Map<number, string> = new Map(); // hour -> tweetUrl
+let publishedTweets: Map<string, string> = new Map(); // id -> tweetUrl
 
 function todayStr() { const d = new Date(); return `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,"0")}-${String(d.getUTCDate()).padStart(2,"0")}`; }
 function dateHeader(hour: number, od?: string) { return `📅 ${od||todayStr()} ${String(hour).padStart(2,"0")}:00（UTC）\n\n`; }
@@ -39,7 +39,7 @@ function scheduleAutoPost() {
   if (generatedPosts.length === 0) return;
   autoPostEnabled = true; autoPostLog = [];
   for (const post of generatedPosts) {
-    const h = post.hour;
+    const h = post.id;
     try {
       const job = cron.schedule(`0 ${h} * * *`, async () => {
         const n = new Date(); const nd = `${n.getUTCFullYear()}-${String(n.getUTCMonth()+1).padStart(2,"0")}-${String(n.getUTCDate()).padStart(2,"0")}`;
@@ -50,14 +50,14 @@ function scheduleAutoPost() {
           if (!r.success) {
             r = await postToXWithCookies(post.texts.en);
           }
-          if (r.success && (r as any).tweetUrl) publishedTweets.set(post.hour, (r as any).tweetUrl);
-          autoPostLog.push({ time: new Date().toISOString(), hour: h, platform: "X", status: r.success ? "ok" : "fail:" + (r.error || "unknown") });
-        } catch (e: any) { autoPostLog.push({ time: new Date().toISOString(), hour: h, platform: "X", status: "err:" + (e.message || "") }); }
+          if (r.success && (r as any).tweetUrl) publishedTweets.set(post.id, (r as any).tweetUrl);
+          autoPostLog.push({ time: new Date().toISOString(), id: post.id, platform: "X", status: r.success ? "ok" : ("fail:" + (r.error || "unknown")) });
+        } catch (e: any) { autoPostLog.push({ time: new Date().toISOString(), id: post.id, platform: "X", status: "err:" + (e.message || "") }); }
       }, { timezone: "UTC" });
       cronJobs.set(h, job);
-    } catch (e: any) { autoPostLog.push({ time: new Date().toISOString(), hour: h, platform: "X", status: "cron:" + e.message }); }
+    } catch (e: any) { autoPostLog.push({ time: new Date().toISOString(), id: post.id, platform: "X", status: "cron:" + e.message }); }
   }
-  autoPostLog.push({ time: new Date().toISOString(), hour: -1, platform: "X", status: "已安排 " + cronJobs.size + " 条 (浏览器)" });
+  autoPostLog.push({ time: new Date().toISOString(), id: "system", platform: "X", status: "已安排 " + cronJobs.size + " 条 (浏览器)" });
 }
 
 // ─── OAuth 2.0 PKCE ────────────────────────────────────
@@ -113,58 +113,70 @@ app.post("/api/config", (req, res) => {
 });
 
 // ─── Generate ──────────────────────────────────────────
-async function runGeneration() {
+async function runGeneration(date: string, zodiacNames: string[]) {
   const cfg = loadConfig();
   process.env.DEEPSEEK_API_KEY = cfg.openai.apiKey; process.env.DEEPSEEK_BASE_URL = cfg.openai.baseURL; process.env.DEEPSEEK_MODEL = cfg.openai.model;
-  isGenerating = true; isPaused = false; abortController = new AbortController(); const signal = abortController.signal;
+  isGenerating = true; abortController = new AbortController(); const signal = abortController.signal;
   try {
-    generationLog = []; generatedPosts = [];
-    const astroSnapshot = await getCurrentAstroSnapshot(targetDate).catch(() => ({ timestamp: new Date().toISOString(), positions: [], moonPhase: { phase: "unknown", illumination: 0 } }));
+    generationLog = [];
+    const zodiacObjs = zodiacNames.map(name => {
+      const found = ZODIAC_SIGNS.find(z => z.name === name);
+      return found || { name, nameZh: name };
+    });
+    
+    const astroSnapshot = await getCurrentAstroSnapshot(date).catch(() => ({ timestamp: new Date().toISOString(), positions: [], moonPhase: { phase: "unknown", illumination: 0 } }));
     const astroCtx = buildAstroContext(astroSnapshot);
-    const hz: { hour: number; zodiacs: { name: string; nameZh: string }[] }[] = [];
-    for (let h = 0; h < 24; h++) { const cy = h % 4; hz.push({ hour: h, zodiacs: ZODIAC_SIGNS.slice(cy*3,cy*3+3).map(z => ({ name: z.name, nameZh: z.nameZh })) }); }
-    const deck = buildTarotDeck(); const kctx = buildKnowledgeContext(hz[0].zodiacs.map(z => getZodiacInfo(z.name)!).filter(Boolean), []);
-    for (let h = 0; h < 24; h++) {
-      while (isPaused && !signal.aborted) await new Promise(r => setTimeout(r, 500));
-      if (signal.aborted) { generationLog.push({ time: new Date().toISOString(), hour: h, status: "stopped" }); break; }
-      generationLog.push({ time: new Date().toISOString(), hour: h, status: "generating" });
-      try {
-        const av = [...deck]; const tc: typeof deck = [];
-        for (let i = 0; i < 3 && av.length > 0; i++) { const idx = Math.floor(Math.random()*av.length); tc.push(av[idx]); av.splice(idx,1); }
-        const post = await generatePost(h, hz[h].zodiacs, tc, astroCtx, kctx, getHourEnergy(h));
-        const hdr = dateHeader(h, targetDate); post.texts.zh = hdr + post.texts.zh; post.texts.en = hdr + post.texts.en; post.texts.ja = hdr + post.texts.ja;
-        generatedPosts.push(post); generationLog.push({ time: new Date().toISOString(), hour: h, status: "done" });
-      } catch (e: any) { generationLog.push({ time: new Date().toISOString(), hour: h, status: "failed: " + e.message }); }
+    const deck = buildTarotDeck();
+    const kctx = buildKnowledgeContext(zodiacObjs.map(z => getZodiacInfo(z.name)!).filter(Boolean), []);
+
+    const newPosts = await generateForDateAndZodiacs(
+      date, zodiacObjs, astroCtx, kctx, deck,
+      (zodiac, status) => {
+        generationLog.push({ time: new Date().toISOString(), zodiac, status });
+      },
+      signal
+    );
+
+    // Merge with existing posts (de-duplicate by id)
+    for (const np of newPosts) {
+      const existing = generatedPosts.findIndex(p => p.id === np.id);
+      if (existing >= 0) generatedPosts[existing] = np;
+      else generatedPosts.push(np);
     }
-    for (const p of generatedPosts) savePostToDoc(p, []);
+
+    for (const p of newPosts) savePostToDoc(p, []);
+    
     // Auto-export for GitHub Actions
     const { writeFileSync } = await import("fs");
     const exportPayload = {
       generatedAt: new Date().toISOString(),
-      targetDate,
+      targetDate: date,
       posts: generatedPosts.map(p => ({
-        hour: p.hour,
+        id: p.id,
+        date: p.date,
         zodiacs: p.zodiacs,
         tarotCards: p.tarotCards,
         texts: p.texts,
       })),
     };
     writeFileSync("generated-posts.json", JSON.stringify(exportPayload, null, 2));
-    console.log("✅ exported generated-posts.json");
-    scheduleAutoPost();
+    console.log("✅ exported generated-posts.json with " + generatedPosts.length + " posts");
   } catch (e) { console.error(e); }
-  finally { isGenerating = false; isPaused = false; abortController = null; }
+  finally { isGenerating = false; abortController = null; }
 }
 
 app.post("/api/generate", async (req, res) => {
   if (!loadConfig().openai.apiKey) return res.status(400).json({ error: "请先设置 DeepSeek API Key" });
   if (isGenerating) return res.status(409).json({ error: "已有任务在运行" });
-  targetDate = req.body?.date || todayStr();
-  res.json({ status: "started", date: targetDate }); runGeneration();
+  const date = req.body?.date || todayStr();
+  const zodiacs = req.body?.zodiacs || [];
+  if (zodiacs.length === 0) return res.status(400).json({ error: "请选择至少一个星座" });
+  targetDate = date;
+  res.json({ status: "started", date, total: zodiacs.length });
+  runGeneration(date, zodiacs);
 });
-app.post("/api/generate/pause", (_req, res) => { if (!isGenerating) return res.json({ ok: true }); isPaused = !isPaused; res.json({ ok: true, paused: isPaused }); });
-app.post("/api/generate/stop", (_req, res) => { if (abortController) { abortController.abort(); isGenerating = false; isPaused = false; } res.json({ ok: true }); });
-app.get("/api/generate/status", (_req, res) => { res.json({ total: 24, completed: generatedPosts.length, log: generationLog, isGenerating, isPaused, date: targetDate }); });
+app.post("/api/generate/stop", (_req, res) => { if (abortController) { abortController.abort(); isGenerating = false; } res.json({ ok: true }); });
+app.get("/api/generate/status", (_req, res) => { res.json({ total: generatedPosts.length, completed: generationLog.filter(l => l.status === "done").length, log: generationLog.slice(-30), isGenerating, date: targetDate }); });
 
 app.post("/api/autopost/start", (_req, res) => {
   if (generatedPosts.length === 0) return res.status(400).json({ error: "没有已生成的运势，请先生成" });
@@ -173,16 +185,16 @@ app.post("/api/autopost/start", (_req, res) => {
 });
 app.post("/api/autopost/stop", (_req, res) => { clearCronJobs(); res.json({ ok: true }); });
 app.get("/api/autopost/status", (_req, res) => {
-  const sched: { hour: number; date: string }[] = [];
-  for (const [h] of cronJobs) sched.push({ hour: h, date: targetDate });
+  const sched: { id: string; date: string }[] = [];
+  for (const [h] of cronJobs) sched.push({ id: h, date: targetDate });
   res.json({ enabled: autoPostEnabled, scheduledCount: cronJobs.size, scheduled: sched, log: autoPostLog.slice(-20), targetDate });
 });
 
 app.get("/api/posts", (_req, res) => {
-  res.json({ date: targetDate || todayStr(), posts: generatedPosts.map(p => ({ hour: p.hour, zodiacs: p.zodiacs, tarotCards: p.tarotCards, zh: p.texts.zh?.substring(0,100)+"...", en: p.texts.en?.substring(0,100)+"...", ja: p.texts.ja?.substring(0,100)+"..." })) });
+  res.json({ date: targetDate || todayStr(), posts: generatedPosts.map(p => ({ id: p.id, date: p.date, zodiacs: p.zodiacs, tarotCards: p.tarotCards, preview: p.preview, zh: p.texts.zh?.substring(0,100)+"...", en: p.texts.en?.substring(0,100)+"..." })) });
 });
-app.get("/api/posts/:hour", (req, res) => {
-  const post = generatedPosts.find(p => p.hour === parseInt(req.params.hour));
+app.get("/api/posts/:id", (req, res) => {
+  const post = generatedPosts.find(p => p.id === req.params.id);
   if (!post) return res.status(404).json({ error: "Not found" }); res.json(post);
 });
 // ─── Export posts for GitHub Actions ──────────────────
@@ -191,7 +203,8 @@ app.get("/api/posts/export/github", (_req, res) => {
     generatedAt: new Date().toISOString(),
     targetDate,
     posts: generatedPosts.map(p => ({
-      hour: p.hour,
+      id: p.id,
+      date: p.date,
       zodiacs: p.zodiacs,
       tarotCards: p.tarotCards,
       texts: p.texts,
@@ -200,11 +213,10 @@ app.get("/api/posts/export/github", (_req, res) => {
   res.json(payload);
 });
 
-app.delete("/api/posts/:hour", async (req, res) => {
-  const hour = parseInt(req.params.hour); const idx = generatedPosts.findIndex(p => p.hour === hour);
+app.delete("/api/posts/:id", async (req, res) => {
+  const idx = generatedPosts.findIndex(p => p.id === req.params.id);
   if (idx === -1) return res.status(404).json({ error: "Not found" });
-  // Also delete from X if published
-  const tweetUrl = publishedTweets.get(hour);
+  const tweetUrl = publishedTweets.get(req.params.id as any);
   let xDeleted = false;
   if (tweetUrl) {
     try {
@@ -212,13 +224,13 @@ app.delete("/api/posts/:hour", async (req, res) => {
       xDeleted = dr.success;
     } catch {}
   }
-  generatedPosts.splice(idx, 1); publishedTweets.delete(hour);
+  generatedPosts.splice(idx, 1); publishedTweets.delete(req.params.id as any);
   res.json({ ok: true, xDeleted });
 });
 
 // ─── Publish (browser) ─────────────────────────────────
-app.post("/api/publish/:hour", async (req, res) => {
-  const post = generatedPosts.find(p => p.hour === parseInt(req.params.hour));
+app.post("/api/publish/:id", async (req, res) => {
+  const post = generatedPosts.find(p => p.id === req.params.id);
   if (!post) return res.status(404).json({ error: "先点击「生成运势」" });
   const cfg = loadConfig(); const results: PublishResult[] = [];
 
@@ -226,7 +238,7 @@ app.post("/api/publish/:hour", async (req, res) => {
   if (!br.success) {
     br = await postToXWithCookies(post.texts.en);
   }
-  if (br.success && (br as any).tweetUrl) publishedTweets.set(post.hour, (br as any).tweetUrl);
+  if (br.success && (br as any).tweetUrl) publishedTweets.set(post.id as any, (br as any).tweetUrl);
   results.push({ platform: "X", lang: "en", ...br });
 
   if (cfg.instagram.username) { const r = await publishToInstagramPost(post, "en", cfg.instagram.username, cfg.instagram.password); results.push({ platform: "Instagram", lang: "en", ...r }); }

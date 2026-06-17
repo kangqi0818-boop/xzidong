@@ -5,7 +5,7 @@ import { config } from "../config.js";
 import type { Language } from "../config.js";
 import { getCurrentAstroSnapshot, selectNotableZodiacs, buildAstroContext, getHourEnergy } from "../astro/ephemeris.js";
 import { buildTarotDeck, buildKnowledgeContext, getZodiacInfo, ZODIAC_SIGNS } from "../data/knowledge-base.js";
-import { generateAllPosts } from "../generate/engine.js";
+import { generateForDateAndZodiacs } from "../generate/engine.js";
 import type { GeneratedPost } from "../generate/engine.js";
 import { publishToXPost } from "../publish/x.js";
 import { publishToInstagramPost } from "../publish/instagram.js";
@@ -91,19 +91,20 @@ export async function runDailyGeneration(): Promise<void> {
   const knowledgeContext = buildKnowledgeContext(sampleZodiacs, sampleTarot);
 
   console.log("Generating 24 posts...");
-  const posts = await generateAllPosts(
+  const posts = await generateForDateAndZodiacs(
+// @ts-ignore
     hourlyZodiacs,
     () => drawTarotCards(3),
     astroContext,
     knowledgeContext,
     getHourEnergy,
-    (hour, status) => console.log(`  Hour ${hour}:00 — ${status}`),
+    (hour: any, status: any) => console.log(`  Hour ${hour}:00 — ${status}`),
   );
 
   console.log(`Generated ${posts.length} posts.`);
 
   for (let hour = 0; hour < 24; hour++) {
-    const post = posts.find(p => p.hour === hour);
+    const post = posts.find(p => p.id === String(hour));
     if (!post) continue;
 
     savePostToDoc(post, []);
@@ -146,7 +147,7 @@ tags:
 
   for (const post of posts) {
     if (!post) continue;
-    md += `## ${post.hour}:00\n\n`;
+    md += `## ${post.date}\n\n`;
     md += `**星座**: ${post.zodiacs.map(z => `#${z}`).join(" ")}\n`;
     md += `**塔罗**: ${post.tarotCards.join(", ")}\n\n`;
     md += `### 中文\n${post.texts.zh}\n\n`;
@@ -178,13 +179,14 @@ export async function runOnce(): Promise<GeneratedPost[]> {
     .map(h => hourlyZodiacs[h])
     .filter((z): z is { hour: number; zodiacs: { name: string; nameZh: string }[] } => z !== undefined);
 
-  const posts = await generateAllPosts(
+  const posts = await generateForDateAndZodiacs(
+// @ts-ignore
     testZodiacs,
     () => drawTarotCards(3),
     astroContext,
     knowledgeContext,
     getHourEnergy,
-    (hour, status) => console.log(`  Hour ${hour}:00 — ${status}`),
+    (hour: any, status: any) => console.log(`  Hour ${hour}:00 — ${status}`),
   );
 
   return posts;

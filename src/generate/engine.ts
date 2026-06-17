@@ -3,103 +3,58 @@ import { config } from "../config.js";
 import type { Language } from "../config.js";
 
 export interface GeneratedPost {
-  hour: number;
+  id: string;
+  date: string;
   zodiacs: string[];
   tarotCards: string[];
   texts: Record<Language, string>;
+  preview: string;
 }
 
 function getClient(): OpenAI {
-  const apiKey = config.openai.apiKey || process.env.DEEPSEEK_API_KEY || process.env.OPENAI_API_KEY || "";
-  const baseURL = config.openai.baseURL || process.env.DEEPSEEK_BASE_URL || process.env.OPENAI_BASE_URL || "https://api.deepseek.com";
+  const apiKey = config.openai.apiKey || process.env.DEEPSEEK_API_KEY || "";
+  const baseURL = config.openai.baseURL || process.env.DEEPSEEK_BASE_URL || "https://api.deepseek.com";
   return new OpenAI({ apiKey, baseURL });
 }
 
 function buildSystemPrompt(): string {
-  return `You are a master astrologer and content creator blending Eastern and Western esoteric traditions. 
-You create compelling, viral-ready daily horoscope posts that combine:
-- Western astrology (zodiac signs, planetary transits, houses)
-- Chinese metaphysics (五行/Wuxing, 天干地支, 时辰系统)
-- Tarot (both Major and Minor Arcana)
-- Chinese health wisdom (穴位/acupoints, 食疗/diet therapy, 季节养生/seasonal wellness)
-
-Your tone: mysterious yet approachable, poetic but not vague, specific enough to feel personal.
-Use rich emoji throughout for visual rhythm. Each post must be self-contained and shareable.
-
-CRITICAL RULES:
-- Generate in THREE languages: Chinese (zh), English (en), Japanese (ja)
-- Each language version should be culturally adapted, not literal translation
-- Chinese: Use 繁体/简体 mixed naturally, reference 五行/时辰 naturally
-- English: Western-friendly but with authentic Eastern wisdom woven in
-- Japanese: Honorific-aware, reference 和風 aesthetics
-- End each post with an interactive question to drive engagement
-- Include relevant emoji clusters at the end for visual appeal
-- Total length per post: 2-4 short paragraphs, emoji-heavy but substantive`;
+  const p = "You are a master astrologer blending Eastern and Western esoteric traditions.\nCreate compelling horoscope posts for specific zodiac signs on specific dates.\n\nContent includes:\n1. Daily Fortune\n2. Precautions\n3. Lucky Color with hex code\n4. Lucky Number (1-99)\n5. Key Prediction\n\nIntegrate Western astrology, Chinese metaphysics (Wuxing), Tarot, Chinese health wisdom.\nTone: mysterious yet approachable, poetic but specific. Rich emoji throughout.\n\nCRITICAL: Generate in THREE languages (zh, en, ja). Each culturally adapted.\nEnd each with an interactive question.\n3-5 short paragraphs per language, emoji-heavy.";
+  return p;
 }
 
 function buildUserPrompt(
-  hour: number,
-  zodiacs: { name: string; nameZh: string }[],
+  date: string,
+  zodiac: { name: string; nameZh: string },
   tarotCards: { name: string; nameZh: string; upright: string; reversed: string }[],
   astroContext: string,
-  knowledgeContext: string,
-  hourEnergy: string,
+  knowledgeContext: string
 ): string {
-  return `## TASK
-Generate ONE horoscope post for hour ${hour}:00 (UTC). 
-The post should focus on these 3 zodiac signs, weaving in the tarot draws and real astronomical data.
+  const dayOfWeek = new Date(date + "T00:00:00Z").toLocaleDateString("en-US", { weekday: "long" });
+  const cardsList = tarotCards.map((c, i) => "- Card " + (i + 1) + ": " + c.nameZh + " (" + c.name + ") - Upright: " + c.upright + " | Reversed: " + c.reversed).join("\n");
 
-## SELECTED ZODIACS
-${zodiacs.map(z => `- ${z.nameZh} (${z.name})`).join("\n")}
-
-## TAROT DRAWS (random)
-${tarotCards.map((c, i) => `- Card ${i+1}: ${c.nameZh} (${c.name}) — Upright: ${c.upright} | Reversed: ${c.reversed}`).join("\n")}
-
-## HOUR ENERGY
-${hourEnergy}
-
-## REAL ASTRONOMICAL DATA
-${astroContext}
-
-## KNOWLEDGE BASE REFERENCE
-${knowledgeContext}
-
-## OUTPUT FORMAT
-Return valid JSON only, no markdown, no backticks:
-
-{
-  "zh": "中文文案...",
-  "en": "English post...",
-  "ja": "日本語の投稿..."
-}
-
-Each language field contains the complete post for that language.`;
+  return "## TASK\nGenerate a detailed daily horoscope post for " + zodiac.nameZh + " (" + zodiac.name + ") for " + date + " (" + dayOfWeek + ").\n\n## TAROT DRAW\n" + cardsList + "\n\n## ASTRONOMICAL DATA\n" + astroContext + "\n\n## KNOWLEDGE BASE REFERENCE\n" + knowledgeContext + "\n\n## CONTENT REQUIREMENTS\n- Fortune outlook\n- Precautions (2-3 specific things)\n- Lucky Color with hex code\n- Lucky Number (1-99)\n- A specific, memorable prediction\n- End with interactive question\n\n## OUTPUT FORMAT\nReturn valid JSON only:\n{\"zh\": \"...\", \"en\": \"...\", \"ja\": \"...\"}";
 }
 
 export async function generatePost(
-  hour: number,
-  zodiacs: { name: string; nameZh: string }[],
+  date: string,
+  zodiac: { name: string; nameZh: string },
   tarotCards: { name: string; nameZh: string; upright: string; reversed: string }[],
   astroContext: string,
-  knowledgeContext: string,
-  hourEnergy: string,
+  knowledgeContext: string
 ): Promise<GeneratedPost> {
   const client = getClient();
-  const userPrompt = buildUserPrompt(
-    hour, zodiacs, tarotCards, astroContext, knowledgeContext, hourEnergy
-  );
-
+  const userPrompt = buildUserPrompt(date, zodiac, tarotCards, astroContext, knowledgeContext);
   const model = config.openai.model || process.env.DEEPSEEK_MODEL || "deepseek-v4-pro";
 
   const response = await client.chat.completions.create({
     model,
     messages: [
       { role: "system", content: buildSystemPrompt() },
-      { role: "user", content: userPrompt },
+      { role: "user", content: userPrompt }
     ],
     response_format: { type: "json_object" },
     temperature: 0.9,
-    max_tokens: 2000,
+    max_tokens: 2500
   });
 
   const content = response.choices[0]?.message?.content;
@@ -109,43 +64,53 @@ export async function generatePost(
 
   for (const lang of config.languages) {
     if (!parsed[lang] || parsed[lang].length < 50) {
-      throw new Error(`Missing or too short content for language: ${lang}`);
+      throw new Error("Missing or too short content for language: " + lang);
     }
   }
 
+  const preview = parsed.en.substring(0, 120).replace(/\n/g, " ");
+
   return {
-    hour,
-    zodiacs: zodiacs.map(z => z.name),
+    id: date + "-" + zodiac.name,
+    date,
+    zodiacs: [zodiac.name],
     tarotCards: tarotCards.map(c => c.name),
     texts: parsed,
+    preview
   };
 }
 
-export async function generateAllPosts(
-  hourlyZodiacs: { hour: number; zodiacs: { name: string; nameZh: string }[] }[],
-  hourlyTarot: (hour: number) => { name: string; nameZh: string; upright: string; reversed: string }[],
+export async function generateForDateAndZodiacs(
+  date: string,
+  zodiacs: { name: string; nameZh: string }[],
   astroContext: string,
   knowledgeContext: string,
-  hourEnergyFn: (hour: number) => string,
-  onProgress?: (hour: number, status: string) => void,
+  tarotDeck: { name: string; nameZh: string; upright: string; reversed: string }[],
+  onProgress?: (zodiac: string, status: string) => void,
+  signal?: AbortSignal
 ): Promise<GeneratedPost[]> {
   const posts: GeneratedPost[] = [];
+  const deck = [...tarotDeck];
 
-  for (let hour = 0; hour < 24; hour++) {
-    const zodiacsForHour = hourlyZodiacs.find(h => h.hour === hour)?.zodiacs || hourlyZodiacs[0].zodiacs;
-    const tarotForHour = hourlyTarot(hour);
+  for (const zodiac of zodiacs) {
+    if (signal?.aborted) break;
 
-    onProgress?.(hour, "generating");
+    onProgress?.(zodiac.name, "generating");
 
     try {
-      const post = await generatePost(
-        hour, zodiacsForHour, tarotForHour,
-        astroContext, knowledgeContext, hourEnergyFn(hour)
-      );
+      const tc: typeof tarotDeck = [];
+      const av = [...deck];
+      for (let i = 0; i < 3 && av.length > 0; i++) {
+        const idx = Math.floor(Math.random() * av.length);
+        tc.push(av[idx]);
+        av.splice(idx, 1);
+      }
+
+      const post = await generatePost(date, zodiac, tc, astroContext, knowledgeContext);
       posts.push(post);
-      onProgress?.(hour, "done");
+      onProgress?.(zodiac.name, "done");
     } catch (err: any) {
-      onProgress?.(hour, `failed: ${err.message}`);
+      onProgress?.(zodiac.name, "failed: " + err.message);
     }
   }
 

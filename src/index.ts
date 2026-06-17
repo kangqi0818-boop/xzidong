@@ -23,7 +23,7 @@ async function main() {
       const posts = await runOnce();
       console.log(`\nGenerated ${posts.length} posts:`);
       for (const post of posts) {
-        console.log(`\n=== Hour ${post.hour}:00 ===`);
+        console.log(`\n=== Hour ${post.date} ===`);
         console.log(`Zodiacs: ${post.zodiacs.join(", ")}`);
         console.log(`Tarot: ${post.tarotCards.join(", ")}`);
         console.log(`\n[zh]\n${post.texts.zh}`);
@@ -42,7 +42,7 @@ async function main() {
       console.log("Mode: Generate + publish one cycle");
       const posts = await runOnce();
       for (const post of posts) {
-        console.log(`Publishing hour ${post.hour}:00 — ${post.zodiacs.join(", ")}`);
+        console.log(`Publishing hour ${post.date} — ${post.zodiacs.join(", ")}`);
         const results = await publishPost(post);
         const ok = results.filter(r => r.success).length;
         const fail = results.filter(r => !r.success).length;

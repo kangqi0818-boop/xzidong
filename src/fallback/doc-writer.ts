@@ -22,14 +22,14 @@ export function savePostToDoc(
   }
 
   const now = timestamp || new Date().toISOString().replace(/[:.]/g, "-");
-  const fileName = `运势_${post.hour.toString().padStart(2, "0")}时_${now}.doc`;
+  const fileName = `运势_${post.zodiacs[0] || "?"}时_${now}.doc`;
 
   const failedResults = results.filter(r => !r.success);
   const successResults = results.filter(r => r.success);
 
   let rtf = `{\\rtf1\\ansi\\deff0
 {\\fonttbl{\\f0 \\fswiss Helvetica;}{\\f1 \\fnil MS Mincho;}}
-\\pard\\f0\\fs28\\b HOUR: ${post.hour}:00\\b0\\par
+\\pard\\f0\\fs28\\b ZODIACS: ${post.zodiacs.join(", ")}\\b0\\par
 \\pard\\f0\\fs24\\b Zodiacs:\\b0 ${post.zodiacs.join(", ")}\\par
 \\pard\\f0\\fs24\\b Tarot:\\b0 ${post.tarotCards.join(", ")}\\par
 \\par
@@ -74,13 +74,13 @@ export function savePostToDoc(
 
 export function saveAllPostsToDoc(
   posts: GeneratedPost[],
-  allResults: Map<number, PublishResult[]>,
+  allResults: Map<string, PublishResult[]>,
 ): string[] {
   const files: string[] = [];
   const timestamp = new Date().toISOString().replace(/[:.]/g, "-").substring(0, 19);
 
   for (const post of posts) {
-    const results = allResults.get(post.hour) || [];
+    const results = allResults.get(post.id) || [];
     const filePath = savePostToDoc(post, results, timestamp);
     files.push(filePath);
   }

@@ -5,131 +5,113 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>🔮 命理运势生成器</title>
 <style>
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #0f0f1a; color: #e0e0e0; min-height: 100vh; }
-.header { background: linear-gradient(135deg, #1a1a2e, #16213e); padding: 20px 24px; border-bottom: 1px solid #2a2a4a; display: flex; align-items: center; gap: 12px; }
-.header h1 { font-size: 1.4rem; background: linear-gradient(90deg, #c084fc, #818cf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-.tabs { display: flex; gap: 4px; padding: 12px 24px; background: #16162a; border-bottom: 1px solid #2a2a4a; }
-.tab { padding: 8px 20px; border-radius: 8px; cursor: pointer; font-size: 0.9rem; color: #888; border: none; background: transparent; transition: .2s; }
-.tab:hover { color: #ccc; background: #1e1e3a; }
-.tab.active { background: #2d2d5a; color: #c084fc; }
-.content { padding: 24px; max-width: 900px; margin: 0 auto; }
-.card { background: #1a1a30; border: 1px solid #2a2a4a; border-radius: 12px; padding: 24px; margin-bottom: 16px; }
-.card h3 { font-size: 1rem; color: #c084fc; margin-bottom: 16px; }
-.form-group { margin-bottom: 12px; }
-.form-group label { display: block; font-size: 0.8rem; color: #999; margin-bottom: 4px; }
-.form-group input, .form-group select { width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid #3a3a5a; background: #12122a; color: #e0e0e0; font-size: 0.9rem; }
-.form-group input:focus, .form-group select:focus { outline: none; border-color: #c084fc; }
-.row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.btn { padding: 10px 24px; border-radius: 8px; border: none; cursor: pointer; font-size: 0.9rem; font-weight: 600; transition: .2s; }
-.btn-primary { background: linear-gradient(135deg, #7c3aed, #6366f1); color: white; }
-.btn-primary:hover { opacity: 0.9; }
-.btn-secondary { background: #2d2d5a; color: #ccc; }
-.btn-warning { background: #5a4a1a; color: #fbbf24; }
-.btn-danger { background: #5a2020; color: #fca5a5; }
-.btn-sm { padding: 6px 14px; font-size: 0.8rem; }
-.btn:disabled { opacity: 0.4; cursor: not-allowed; }
-.btn-group { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-.progress-bar { width: 100%; height: 6px; background: #2a2a4a; border-radius: 3px; overflow: hidden; margin: 12px 0; }
-.progress-fill { height: 100%; background: linear-gradient(90deg, #7c3aed, #818cf8); border-radius: 3px; transition: width .3s; }
-.log { font-family: monospace; font-size: 0.75rem; max-height: 200px; overflow-y: auto; background: #0a0a1a; border-radius: 8px; padding: 12px; margin-top: 12px; }
-.log-line { padding: 3px 0; color: #888; }
-.log-line.done { color: #4ade80; }
-.log-line.failed { color: #f87171; }
-.post-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
-.post-card { background: #1a1a30; border: 1px solid #2a2a4a; border-radius: 10px; padding: 16px; cursor: pointer; transition: .2s; position: relative; }
-.post-card:hover { border-color: #c084fc; }
-.post-card h4 { font-size: 0.9rem; color: #c084fc; margin-bottom: 8px; padding-right: 28px; }
-.post-card .meta { font-size: 0.75rem; color: #777; }
-.post-card .del-btn { position: absolute; top: 12px; right: 12px; cursor: pointer; color: #f87171; font-size: 0.9rem; opacity: 0.6; transition: .2s; }
-.post-card .del-btn:hover { opacity: 1; }
-.post-detail { max-height: 70vh; overflow-y: auto; }
-.post-detail h4 { margin-top: 16px; color: #818cf8; }
-.post-detail p { line-height: 1.7; white-space: pre-wrap; margin: 8px 0; color: #ccc; }
-.toast { position: fixed; top: 20px; right: 20px; padding: 12px 20px; border-radius: 8px; font-size: 0.85rem; z-index: 1000; animation: slideIn .3s ease; }
-.toast.success { background: #1a3a1a; color: #4ade80; border: 1px solid #2a5a2a; }
-.toast.error { background: #3a1a1a; color: #f87171; border: 1px solid #5a2a2a; }
-@keyframes slideIn { from { transform: translateX(100px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-.hidden { display: none; }
-.sort-btn { cursor: pointer; color: #818cf8; font-size: 0.85rem; margin-left: 8px; user-select: none; }
-.sort-btn:hover { color: #c084fc; }
-.day-select { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
-.day-select label { color: #999; font-size: 0.85rem; white-space: nowrap; }
-.day-select select { padding: 8px 16px; border-radius: 8px; border: 1px solid #3a3a5a; background: #12122a; color: #e0e0e0; font-size: 0.9rem; cursor: pointer; }
-.autopost-status { background: #0a1a2a; border: 1px solid #1a3a5a; border-radius: 8px; padding: 12px 16px; margin-top: 16px; }
-.autopost-status .badge { display: inline-block; padding: 2px 10px; border-radius: 10px; font-size: 0.75rem; font-weight: 600; }
-.badge-on { background: #1a3a1a; color: #4ade80; }
-.badge-off { background: #3a3a1a; color: #fbbf24; }
-.schedule-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(60px, 1fr)); gap: 4px; margin-top: 8px; }
-.schedule-item { background: #1a2a3a; border-radius: 4px; padding: 4px; text-align: center; font-size: 0.7rem; color: #60a5fa; }
-.pub-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #2a2a4a; }
-.pub-row .pub-del { cursor: pointer; color: #f87171; font-size: 0.85rem; margin-left: 12px; opacity: 0.6; }
-.pub-row .pub-del:hover { opacity: 1; }
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0a0a1a;color:#e2e8f0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh}
+.container{max-width:900px;margin:0 auto;padding:24px 16px}
+h1{font-size:1.5rem;text-align:center;margin-bottom:24px;background:linear-gradient(135deg,#818cf8,#c084fc);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.card{background:#111130;border-radius:12px;padding:20px;margin-bottom:16px;border:1px solid #1e1e4a}
+.card h3{margin-bottom:16px;font-size:1rem;color:#a5b4fc}
+.btn{padding:8px 18px;border-radius:8px;border:none;cursor:pointer;font-size:0.85rem;font-weight:600;transition:all .2s}
+.btn-primary{background:#6366f1;color:#fff}
+.btn-primary:hover{background:#4f46e5}
+.btn-primary:disabled{background:#374151;color:#6b7280;cursor:not-allowed}
+.btn-sm{padding:5px 12px;font-size:0.75rem}
+.btn-danger{background:#dc2626;color:#fff}
+.btn-danger:hover{background:#b91c1c}
+.btn-secondary{background:#374151;color:#d1d5db}
+.btn-secondary:hover{background:#4b5563}
+.toast{position:fixed;top:16px;right:16px;background:#065f46;color:#4ade80;padding:10px 20px;border-radius:8px;font-size:0.85rem;z-index:999;animation:fadeOut 3s forwards}
+@keyframes fadeOut{0%{opacity:1}70%{opacity:1}100%{opacity:0}}
+.zodiac-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(70px,1fr));gap:8px;margin-bottom:20px}
+.zodiac-btn{padding:8px 4px;border-radius:8px;border:2px solid #2a2a5a;background:#1a1a3a;color:#888;cursor:pointer;font-size:0.7rem;text-align:center;transition:all .2s;line-height:1.3}
+.zodiac-btn:hover{border-color:#6366f1}
+.zodiac-btn.selected{border-color:#818cf8;background:#1e1e4a;color:#818cf8;font-weight:700}
+.zodiac-btn .emoji{display:block;font-size:1.2rem;margin-bottom:2px}
+.date-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px}
+.date-card{border:2px solid #2a2a5a;border-radius:10px;padding:12px 8px;text-align:center;background:#1a1a3a}
+.date-card .date-label{font-size:0.85rem;font-weight:700;color:#a5b4fc;margin-bottom:4px}
+.date-card .date-full{font-size:0.7rem;color:#6b7280;margin-bottom:8px}
+.date-card .btn{width:100%}
+.post-grid{display:grid;grid-template-columns:1fr;gap:10px;max-height:600px;overflow-y:auto}
+.post-card{cursor:pointer;background:#1a1a3a;border-radius:8px;padding:12px;border:1px solid #2a2a5a;transition:border-color .2s;position:relative}
+.post-card:hover{border-color:#6366f1}
+.post-card h4{margin-bottom:6px;font-size:0.9rem}
+.post-card .meta{font-size:0.75rem;color:#888;margin-bottom:4px}
+.post-card .del-btn{position:absolute;top:8px;right:10px;cursor:pointer;font-size:0.9rem;opacity:0.5;z-index:1}
+.post-card .del-btn:hover{opacity:1}
+.sort-btn{cursor:pointer;margin-left:12px;font-size:0.8rem;color:#818cf8;display:inline}
+.post-detail{padding:16px;background:#0f0f2a;border-radius:8px}
+.post-detail h4{color:#a5b4fc;margin:12px 0 6px;font-size:0.85rem}
+.post-detail p{font-size:0.8rem;line-height:1.5;color:#ccc;white-space:pre-wrap}
+.hidden{display:none!important}
+.log{max-height:200px;overflow-y:auto;font-size:0.75rem;color:#6b7280;line-height:1.8}
+.log-line {padding:2px 0}
+.log-line.done {color:#4ade80}
+.log-line.failed {color:#f87171}
+.progress-bar{height:4px;background:#1e1e4a;border-radius:2px;margin:12px 0;overflow:hidden}
+.progress-fill{height:100%;background:#6366f1;transition:width .3s}
+.btn-group{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.status-text{font-size:0.8rem;color:#888;margin-top:8px}
+.autopost-status{background:#0a1a2a;border:1px solid #1a3a5a;border-radius:8px;padding:12px 16px;margin-top:16px}
+.badge{display:inline-block;padding:2px 10px;border-radius:10px;font-size:0.7rem;font-weight:600}
+.badge-on{background:#065f46;color:#4ade80}
+.badge-off{background:#374151;color:#9ca3af}
+.pub-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid #2a2a4a}
+.pub-row .pub-del{cursor:pointer;color:#f87171;font-size:0.85rem;margin-left:12px;opacity:0.6}
+.pub-row .pub-del:hover{opacity:1}
+.tabs{display:flex;gap:4px;margin-bottom:20px}
+.tab{padding:10px 20px;border-radius:8px 8px 0 0;border:none;cursor:pointer;font-size:0.85rem;background:#1a1a3a;color:#888;transition:all .2s}
+.tab.active{background:#111130;color:#a5b4fc;border-bottom:2px solid #6366f1}
+.generation-card{border:1px solid #2a2a5a;border-radius:8px;padding:14px;margin-bottom:8px;background:#0f0f2a}
+.generation-card .gen-header{font-weight:700;font-size:0.85rem;color:#a5b4fc;margin-bottom:6px}
+.generation-card .gen-status{font-size:0.75rem;color:#6b7280}
 </style>
 </head>
 <body>
 
-<div class="header"><h1>🔮 命理运势生成器</h1><span style="color:#666;font-size:0.8rem;">DeepSeek · AutoPost v2.5</span></div>
+<div class="container">
+  <h1>🔮 命理运势生成器</h1>
 
-<div class="tabs">
-  <button class="tab active" onclick="switchTab('settings')">⚙️ 设置</button>
-  <button class="tab" onclick="switchTab('generate')">✨ 生成</button>
-  <button class="tab" onclick="switchTab('preview')">👁 预览</button>
-  <button class="tab" onclick="switchTab('publish')">🚀 发布</button>
-</div>
-
-<div class="content">
-  <div id="tab-settings">
-    <div class="card"><h3>🤖 DeepSeek AI</h3>
-      <div class="row"><div class="form-group"><label>API Key</label><input type="password" id="cfg-openai-key"></div><div class="form-group"><label>API Base URL</label><input type="text" id="cfg-openai-baseurl" placeholder="https://api.deepseek.com"></div></div>
-      <div class="form-group"><label>Model</label><select id="cfg-openai-model"><option value="deepseek-chat">deepseek-chat (推荐)</option><option value="deepseek-reasoner">deepseek-reasoner (深度思考)</option></select></div>
-    </div>
-    <div class="card"><h3>🐦 X (Twitter)</h3>
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;"><button class="btn btn-primary btn-sm" onclick="connectX()">🔗 连接 X 账号 (OAuth 2.0)</button><span id="x-status" style="font-size:0.8rem;color:#888;"></span></div>
-
-      <div class="form-group"><label>Bearer Token (推荐，OAuth 2.0)</label><input type="password" id="cfg-x-bearer" placeholder="AAAAAAAAAAAAAAAAAAAA..."></div>
-
-      <div class="row"><div class="form-group"><label>API Key</label><input type="password" id="cfg-x-apikey"></div><div class="form-group"><label>API Secret</label><input type="password" id="cfg-x-apisecret"></div></div>
-      <div class="row"><div class="form-group"><label>Access Token</label><input type="password" id="cfg-x-token"></div><div class="form-group"><label>Access Secret</label><input type="password" id="cfg-x-secret"></div></div>
-    </div>
-    <div class="card"><h3>📸 Instagram</h3>
-      <div class="row"><div class="form-group"><label>Username</label><input type="text" id="cfg-ig-user"></div><div class="form-group"><label>Password</label><input type="password" id="cfg-ig-pass"></div></div>
-    </div>
-    <div class="card"><h3>🧵 Threads</h3>
-      <div class="row"><div class="form-group"><label>Access Token</label><input type="password" id="cfg-th-token"></div><div class="form-group"><label>User ID</label><input type="text" id="cfg-th-user"></div></div>
-    </div>
-    <button class="btn btn-primary" onclick="saveConfig()">💾 保存设置</button><span id="config-saved" style="margin-left:12px;color:#4ade80;display:none;">✅ 已保存</span>
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('generate')">✨ 生成</button>
+    <button class="tab" onclick="switchTab('preview')">👁 预览</button>
+    <button class="tab" onclick="switchTab('publish')">🚀 发布</button>
   </div>
 
-  <div id="tab-generate" class="hidden">
+  <!-- ─── Generate Tab ─────────────────────────────── -->
+  <div id="tab-generate">
     <div class="card">
-      <h3>✨ 生成运势</h3>
-      <div class="day-select"><label>📅 选择日期：</label><select id="day-select" onchange="onDayChange()"><option value="0">今天</option><option value="1">明天</option><option value="2">后天</option><option value="3">第四天</option></select><span id="day-preview" style="color:#818cf8;font-size:0.9rem;"></span></div>
+      <h3>♈ 选择星座（可多选）</h3>
+      <div class="zodiac-grid" id="zodiac-grid"></div>
+    </div>
+
+    <div class="card">
+      <h3>📅 选择日期并生成</h3>
+      <div class="date-row" id="date-row"></div>
       <div class="btn-group">
-        <button class="btn btn-primary" id="btn-generate" onclick="startGenerate()">🪄 生成运势</button>
-        <button class="btn btn-warning hidden" id="btn-pause" onclick="togglePause()">⏸ 暂停</button>
-        <button class="btn btn-danger hidden" id="btn-stop" onclick="stopGenerate()">⏹ 停止</button>
+        <button class="btn btn-danger hidden" id="btn-stop" onclick="stopGenerate()">⏹ 停止全部</button>
       </div>
-      <div class="progress-bar" id="progress-container" style="display:none;"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
-      <div id="gen-status" style="margin-top:8px;font-size:0.85rem;color:#888;"></div>
-      <div class="log" id="gen-log" style="display:none;"></div>
-      <div class="autopost-status" id="autopost-panel">
-        <div style="display:flex;align-items:center;justify-content:space-between;">
-          <div><span style="font-size:0.9rem;">🤖 定时发布</span><span class="badge" id="autopost-badge" style="margin-left:8px;">等待启动</span></div>
-          <div>
-            <button class="btn btn-primary btn-sm" id="autopost-start-btn" onclick="startAutoPost()" style="margin-right:8px;">▶ 启动定时发布</button>
-            <button class="btn btn-danger btn-sm hidden" id="autopost-stop-btn" onclick="stopAutoPost()">⏹ 取消全部</button>
-          </div>
+      <div class="progress-bar hidden" id="progress-container"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+      <div class="status-text" id="gen-status"></div>
+      <div class="log hidden" id="gen-log"></div>
+    </div>
+
+    <div class="autopost-status hidden" id="autopost-panel">
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <div><span style="font-size:0.9rem;">🤖 定时发布</span><span class="badge" id="autopost-badge" style="margin-left:8px;">等待启动</span></div>
+        <div>
+          <button class="btn btn-primary btn-sm" id="autopost-start-btn" onclick="startAutoPost()" style="margin-right:8px;">▶ 启动定时发布</button>
+          <button class="btn btn-danger btn-sm hidden" id="autopost-stop-btn" onclick="stopAutoPost()">⏹ 取消全部</button>
         </div>
-        <div style="margin-top:8px;font-size:0.8rem;color:#888;" id="autopost-info">生成运势后可启动定时发布，到点自动发帖</div>
-        <div class="schedule-grid" id="autopost-schedule"></div>
       </div>
+      <div style="margin-top:8px;font-size:0.75rem;color:#888;" id="autopost-info">生成后可启动定时发布</div>
     </div>
   </div>
 
+  <!-- ─── Preview Tab ──────────────────────────────── -->
   <div id="tab-preview" class="hidden">
     <div class="card">
-      <h3>👁 已生成运势 <span id="preview-date" style="color:#888;font-size:0.8rem;"></span><span class="sort-btn" id="sort-btn" onclick="toggleSort()" style="display:none;">🔼 从早到晚</span></h3>
+      <h3>👁 已生成运势 <span id="preview-date" style="color:#888;font-size:0.8rem;"></span><span class="sort-btn" id="sort-btn" onclick="toggleSort()" style="display:none;">🔼</span></h3>
       <div id="preview-empty" style="color:#666;padding:40px;text-align:center;">尚未生成运势</div>
       <div class="post-grid" id="preview-grid"></div>
     </div>
@@ -139,228 +121,316 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; b
     </div>
   </div>
 
+  <!-- ─── Publish Tab ──────────────────────────────── -->
   <div id="tab-publish" class="hidden">
     <div class="card">
-      <h3>🚀 手动发布</h3>
-      <p style="color:#888;font-size:0.9rem;margin-bottom:16px;">选择小时推送，或等自动发布到点执行</p>
+      <h3>🚀 发布到 X</h3>
       <div id="publish-list" style="max-height:500px;overflow-y:auto;"></div>
     </div>
   </div>
 </div>
 
-<div id="toast-container"></div>
-
 <script>
-var sortAsc = true;
-var autoPostPoll = null;
+// ─── State ────────────────────────────────────────────
+const ZODIACS = [
+  {name:'Aries',nameZh:'白羊座',emoji:'♈'},
+  {name:'Taurus',nameZh:'金牛座',emoji:'♉'},
+  {name:'Gemini',nameZh:'双子座',emoji:'♊'},
+  {name:'Cancer',nameZh:'巨蟹座',emoji:'♋'},
+  {name:'Leo',nameZh:'狮子座',emoji:'♌'},
+  {name:'Virgo',nameZh:'处女座',emoji:'♍'},
+  {name:'Libra',nameZh:'天秤座',emoji:'♎'},
+  {name:'Scorpio',nameZh:'天蝎座',emoji:'♏'},
+  {name:'Sagittarius',nameZh:'射手座',emoji:'♐'},
+  {name:'Capricorn',nameZh:'摩羯座',emoji:'♑'},
+  {name:'Aquarius',nameZh:'水瓶座',emoji:'♒'},
+  {name:'Pisces',nameZh:'双鱼座',emoji:'♓'}
+];
 
-function getTargetDate(offset) {
-  var d = new Date();
-  d.setUTCDate(d.getUTCDate() + offset);
-  return d.getUTCFullYear() + '-' + String(d.getUTCMonth()+1).padStart(2,'0') + '-' + String(d.getUTCDate()).padStart(2,'0');
-}
-function onDayChange() { document.getElementById('day-preview').textContent = getTargetDate(parseInt(document.getElementById('day-select').value)); }
-onDayChange();
+let selectedZodiacs = new Set();
+let generatedPosts = [];
+let generationLog = [];
+let isGenerating = false;
+let abortController = null;
+let sortAsc = true;
+let autoPostPoll = null;
 
-function switchTab(name) {
-  document.querySelectorAll('.tab').forEach(function(t){ t.classList.remove('active'); });
-  document.querySelectorAll('[id^="tab-"]').forEach(function(d){ d.classList.add('hidden'); });
-  var idx = {settings:0, generate:1, preview:2, publish:3}[name];
-  if (idx !== undefined) document.querySelectorAll('.tab')[idx].classList.add('active');
-  document.getElementById('tab-' + name).classList.remove('hidden');
-  if (name === 'preview') loadPreview();
-  if (name === 'publish') loadPublishList();
-  if (name === 'generate') loadAutoPostStatus();
+// ─── Init ─────────────────────────────────────────────
+function init() {
+  renderZodiacGrid();
+  renderDateRow();
+  switchTab('generate');
 }
+init();
 
-function toast(msg, type) {
-  var t = document.createElement('div'); t.className = 'toast ' + (type || 'success'); t.textContent = msg;
-  document.getElementById('toast-container').appendChild(t);
-  setTimeout(function(){ t.remove(); }, 3000);
-}
-
-// ─── Config ────────────────────────────────────────────
-async function loadConfig() {
-  var r = await fetch('/api/config'); var cfg = await r.json();
-  document.getElementById('cfg-openai-key').value = cfg.openai.apiKey || '';
-  document.getElementById('cfg-openai-baseurl').value = cfg.openai.baseURL || 'https://api.deepseek.com';
-  document.getElementById('cfg-openai-model').value = cfg.openai.model || 'deepseek-chat';
-  document.getElementById('cfg-x-apikey').value = cfg.x.apiKey || '';
-  document.getElementById('cfg-x-bearer').value = cfg.x.bearerToken || '';
-  document.getElementById('cfg-x-apisecret').value = cfg.x.apiSecret || '';
-  document.getElementById('cfg-x-token').value = cfg.x.accessToken || '';
-  document.getElementById('cfg-x-secret').value = cfg.x.accessSecret || '';
-  document.getElementById('cfg-ig-user').value = cfg.instagram.username || '';
-  document.getElementById('cfg-ig-pass').value = cfg.instagram.password || '';
-  document.getElementById('cfg-th-token').value = cfg.threads.accessToken || '';
-  document.getElementById('cfg-th-user').value = cfg.threads.userId || '';
-}
-async function connectX() {
-  var r = await fetch("/api/x/auth");
-  var d = await r.json();
-  if (d.url) { window.open(d.url, "_blank"); toast("正在跳转到 X 授权页面..."); }
-  else { toast(d.error || "失败", "error"); }
-}
-async function checkXStatus() {
-  var r = await fetch("/api/x/status");
-  var d = await r.json();
-  document.getElementById("x-status").textContent = d.connected ? "✅ 已连接 (" + d.method + ")" : "⚠ 未连接";
-  document.getElementById("x-status").style.color = d.connected ? "#4ade80" : "#fbbf24";
+function renderZodiacGrid() {
+  const grid = document.getElementById('zodiac-grid');
+  grid.innerHTML = ZODIACS.map(z => 
+    `<button class="zodiac-btn${selectedZodiacs.has(z.name)?' selected':''}" onclick="toggleZodiac('${z.name}')">
+      <span class="emoji">${z.emoji}</span>${z.nameZh}
+    </button>`
+  ).join('');
 }
 
-async function saveConfig() {
-  var cfg = {
-    openai: { apiKey: document.getElementById('cfg-openai-key').value, baseURL: document.getElementById('cfg-openai-baseurl').value, model: document.getElementById('cfg-openai-model').value },
-      bearerToken: document.getElementById('cfg-x-bearer').value,
-    x: { apiKey: document.getElementById('cfg-x-apikey').value, apiSecret: document.getElementById('cfg-x-apisecret').value, accessToken: document.getElementById('cfg-x-token').value, accessSecret: document.getElementById('cfg-x-secret').value },
-    instagram: { username: document.getElementById('cfg-ig-user').value, password: document.getElementById('cfg-ig-pass').value },
-    threads: { accessToken: document.getElementById('cfg-th-token').value, userId: document.getElementById('cfg-th-user').value },
-  };
-  await fetch('/api/config', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(cfg) });
-  document.getElementById('config-saved').style.display = 'inline';
-  setTimeout(function(){ document.getElementById('config-saved').style.display = 'none'; }, 2000);
-  toast('设置已保存 ✅');
+function toggleZodiac(name) {
+  if (selectedZodiacs.has(name)) selectedZodiacs.delete(name);
+  else selectedZodiacs.add(name);
+  renderZodiacGrid();
 }
 
-// ─── Generate ──────────────────────────────────────────
-var pollInterval = null;
-async function startGenerate() {
-  var date = getTargetDate(parseInt(document.getElementById('day-select').value));
-  var btn = document.getElementById('btn-generate');
-  btn.disabled = true; btn.textContent = '⏳ 生成中...';
-  document.getElementById('btn-pause').classList.remove('hidden');
+// ─── Date Row ─────────────────────────────────────────
+function getDates() {
+  const dates = [];
+  for (let i = 0; i < 4; i++) {
+    const d = new Date();
+    d.setUTCDate(d.getUTCDate() + i);
+    const y = d.getUTCFullYear();
+    const m = String(d.getUTCMonth()+1).padStart(2,'0');
+    const day = String(d.getUTCDate()).padStart(2,'0');
+    const dateStr = `${y}-${m}-${day}`;
+    const today = i === 0;
+    dates.push({ dateStr, label: today ? '今天' : '', dayOfWeek: d.toLocaleDateString('zh-CN',{weekday:'short'}) });
+  }
+  return dates;
+}
+
+function renderDateRow() {
+  const row = document.getElementById('date-row');
+  const dates = getDates();
+  row.innerHTML = dates.map(d => 
+    `<div class="date-card">
+      <div class="date-label">${d.label||d.dayOfWeek}</div>
+      <div class="date-full">${d.dateStr}</div>
+      <button class="btn btn-primary btn-sm" onclick="startGenerate('${d.dateStr}')">🪄 生成</button>
+    </div>`
+  ).join('');
+}
+
+// ─── Generation ───────────────────────────────────────
+async function startGenerate(dateStr) {
+  if (selectedZodiacs.size === 0) { toast('请先选择星座'); return; }
+  if (isGenerating) { toast('已有任务在运行'); return; }
+
+  const zodiacs = Array.from(selectedZodiacs);
+  isGenerating = true;
+  abortController = new AbortController();
+  generationLog = [];
+  
   document.getElementById('btn-stop').classList.remove('hidden');
-  document.getElementById('progress-container').style.display = 'block';
-  document.getElementById('gen-log').style.display = 'block'; document.getElementById('gen-log').innerHTML = '';
-  // autopost panel stays visible
-  await fetch('/api/generate', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ date: date }) });
-  pollInterval = setInterval(pollStatus, 1500);
-}
-async function togglePause() {
-  var r = await fetch('/api/generate/pause', { method: 'POST' }); var d = await r.json();
-  var btn = document.getElementById('btn-pause'); btn.textContent = d.paused ? '▶ 继续' : '⏸ 暂停';
-  btn.className = d.paused ? 'btn btn-primary' : 'btn btn-warning';
-}
-async function stopGenerate() { await fetch('/api/generate/stop', { method: 'POST' }); clearInterval(pollInterval); resetGenUI(); toast('已停止'); }
-function resetGenUI() { document.getElementById('btn-generate').disabled = false; document.getElementById('btn-generate').textContent = '🪄 生成运势'; document.getElementById('btn-pause').classList.add('hidden'); document.getElementById('btn-stop').classList.add('hidden'); }
+  document.getElementById('progress-container').classList.remove('hidden');
+  document.getElementById('gen-log').classList.remove('hidden');
+  document.getElementById('gen-log').innerHTML = '';
+  document.getElementById('gen-status').textContent = `⏳ 正在为 ${zodiacs.map(z=>ZODIACS.find(x=>x.name===z)?.nameZh||z).join('、')} 生成 ${dateStr} 运势...`;
 
-async function pollStatus() {
-  var r = await fetch('/api/generate/status'); var s = await r.json();
-  var pct = s.total > 0 ? Math.round(s.completed / s.total * 100) : 0;
-  document.getElementById('progress-fill').style.width = pct + '%';
-  var t = '已完成 ' + s.completed + '/' + s.total + ' (' + pct + '%)';
-  if (s.date) t += ' — 📅 ' + s.date;
-  if (s.isPaused) t += ' ⏸ 已暂停';
-  document.getElementById('gen-status').textContent = t;
-  var logEl = document.getElementById('gen-log');
-  logEl.innerHTML = s.log.map(function(l){
-    var cls = l.status === 'done' ? 'done' : l.status.indexOf('fail') >= 0 || l.status.indexOf('stop') >= 0 ? 'failed' : '';
-    return '<div class="log-line ' + cls + '">[' + new Date(l.time).toLocaleTimeString() + '] Hour ' + l.hour + ':00 — ' + l.status + '</div>';
-  }).join('');
-  logEl.scrollTop = logEl.scrollHeight;
-  if (!s.isGenerating && s.completed > 0) { clearInterval(pollInterval); resetGenUI(); toast(s.date + ' ' + s.completed + ' 条已生成'); loadAutoPostStatus(); }
+  try {
+    const res = await fetch('/api/generate', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ date: dateStr, zodiacs }),
+      signal: abortController.signal
+    });
+    const data = await res.json();
+    
+    if (data.error) { toast('❌ ' + data.error); resetGenUI(); return; }
+    
+    // Poll status
+    const pollInterval = setInterval(async () => {
+      if (!isGenerating) { clearInterval(pollInterval); return; }
+      const r = await fetch('/api/generate/status');
+      const s = await r.json();
+      const pct = s.total > 0 ? Math.round(s.completed / s.total * 100) : 0;
+      document.getElementById('progress-fill').style.width = pct + '%';
+      document.getElementById('gen-status').textContent = `⏳ ${s.completed}/${s.total} · 📅 ${s.date}`;
+      
+      const logEl = document.getElementById('gen-log');
+      logEl.innerHTML = s.log.slice(-20).map(l => {
+        let cls = l.status === 'done' ? 'done' : l.status.indexOf('fail') >= 0 || l.status.indexOf('stop') >= 0 ? 'failed' : '';
+        return `<div class="log-line ${cls}">[${new Date(l.time).toLocaleTimeString()}] ${l.status}</div>`;
+      }).join('');
+      logEl.scrollTop = logEl.scrollHeight;
+      
+      if (!s.isGenerating && s.completed > 0) {
+        clearInterval(pollInterval);
+        resetGenUI();
+        toast(`✅ ${s.date} ${s.completed} 条已生成`);
+        loadPreview();
+      }
+    }, 1500);
+  } catch (e) {
+    if (e.name !== 'AbortError') toast('❌ ' + e.message);
+    resetGenUI();
+  }
 }
 
-// ─── Auto-post ─────────────────────────────────────────
+async function stopGenerate() {
+  if (abortController) { abortController.abort(); isGenerating = false; }
+  resetGenUI();
+  toast('⏹ 已停止');
+}
+
+function resetGenUI() {
+  isGenerating = false;
+  document.getElementById('btn-stop').classList.add('hidden');
+}
+
+// ─── Preview ───────────────────────────────────────────
+async function loadPreview() {
+  const r = await fetch('/api/posts');
+  const data = await r.json();
+  generatedPosts = data.posts || [];
+  const grid = document.getElementById('preview-grid');
+  const empty = document.getElementById('preview-empty');
+  const sortBtn = document.getElementById('sort-btn');
+  document.getElementById('preview-date').textContent = '📅 ' + (data.date || '');
+  
+  if (generatedPosts.length === 0) {
+    empty.style.display = 'block'; grid.innerHTML = ''; sortBtn.style.display = 'none'; return;
+  }
+  empty.style.display = 'none'; sortBtn.style.display = 'inline';
+  
+  const sorted = generatedPosts.slice();
+  if (!sortAsc) sorted.reverse();
+  
+  grid.innerHTML = sorted.map(p => 
+    `<div class="post-card" onclick="viewPost('${p.id}')">
+      <span class="del-btn" onclick="event.stopPropagation();deletePost('${p.id}')">❌</span>
+      <h4>📅 ${p.date} · ${(p.zodiacs||[]).join(', ')}</h4>
+      <div class="meta">${(p.preview||'').substring(0,80)}...</div>
+    </div>`
+  ).join('');
+}
+
+function toggleSort() {
+  sortAsc = !sortAsc;
+  document.getElementById('sort-btn').textContent = sortAsc ? '🔼' : '🔽';
+  loadPreview();
+}
+
+async function viewPost(id) {
+  const r = await fetch('/api/posts/' + id);
+  const p = await r.json();
+  document.getElementById('preview-grid').parentElement.classList.add('hidden');
+  document.getElementById('sort-btn').style.display = 'none';
+  document.getElementById('post-detail-card').classList.remove('hidden');
+  document.getElementById('post-detail-content').innerHTML = 
+    `<h3>📅 ${p.date} · ${(p.zodiacs||[]).join(', ')}</h3>
+    <h4>🇨🇳 中文</h4><p>${escapeHtml(p.texts?.zh||'')}</p>
+    <h4>🇺🇸 English</h4><p>${escapeHtml(p.texts?.en||'')}</p>
+    <h4>🇯🇵 日本語</h4><p>${escapeHtml(p.texts?.ja||'')}</p>`;
+}
+
+function closeDetail() {
+  document.getElementById('preview-grid').parentElement.classList.remove('hidden');
+  document.getElementById('sort-btn').style.display = 'inline';
+  document.getElementById('post-detail-card').classList.add('hidden');
+}
+
+async function deletePost(id) {
+  if (!confirm('删除这条运势？')) return;
+  await fetch('/api/posts/' + id, { method: 'DELETE' });
+  toast('已删除');
+  loadPreview();
+}
+
+// ─── Publish ──────────────────────────────────────────
+async function loadPublishList() {
+  const r = await fetch('/api/posts');
+  const data = await r.json();
+  const posts = data.posts || [];
+  document.getElementById('publish-list').innerHTML = posts.length === 0
+    ? '<p style="color:#666;text-align:center;padding:40px;">尚未生成运势</p>'
+    : posts.map(p => 
+      `<div class="pub-row">
+        <div><strong>📅 ${p.date}</strong><span style="color:#888;margin-left:12px;">${(p.zodiacs||[]).join(', ')}</span></div>
+        <div>
+          <button class="btn btn-secondary btn-sm" onclick="publishPost('${p.id}')">📤 发布</button>
+          <span class="pub-del" onclick="deletePost('${p.id}')">❌</span>
+        </div>
+      </div>`
+    ).join('');
+}
+
+async function publishPost(id) {
+  const btn = event.target;
+  btn.disabled = true; btn.textContent = '⏳...';
+  try {
+    const r = await fetch('/api/publish/' + id, { method: 'POST' });
+    const d = await r.json();
+    btn.textContent = '✅ OK';
+    setTimeout(() => { btn.disabled = false; btn.textContent = '📤 发布'; }, 3000);
+  } catch(e) { btn.textContent = '❌'; btn.disabled = false; }
+}
+
+// ─── Auto-post ────────────────────────────────────────
 async function startAutoPost() {
-  var r = await fetch('/api/autopost/start', { method: 'POST' }); var s = await r.json();
+  const r = await fetch('/api/autopost/start', { method: 'POST' });
+  const s = await r.json();
   if (s.error) { toast('❌ ' + s.error); return; }
-  toast('✅ 定时发布已启动！' + s.scheduledCount + ' 条排期中');
+  toast('✅ 定时发布已启动');
   loadAutoPostStatus();
 }
+
 async function loadAutoPostStatus() {
-  var r = await fetch('/api/autopost/status'); var s = await r.json();
-  var panel = document.getElementById('autopost-panel');
-  panel.classList.remove('hidden');
-  var badge = document.getElementById('autopost-badge');
-  var startBtn = document.getElementById('autopost-start-btn');
-  var stopBtn = document.getElementById('autopost-stop-btn');
-  var info = document.getElementById('autopost-info');
-  var grid = document.getElementById('autopost-schedule');
+  const r = await fetch('/api/autopost/status');
+  const s = await r.json();
+  const panel = document.getElementById('autopost-panel');
+  const badge = document.getElementById('autopost-badge');
+  const startBtn = document.getElementById('autopost-start-btn');
+  const stopBtn = document.getElementById('autopost-stop-btn');
+  const info = document.getElementById('autopost-info');
+  
   if (s.enabled && s.scheduledCount > 0) {
+    panel.classList.remove('hidden');
     badge.textContent = '运行中 (' + s.scheduledCount + '条)';
     badge.className = 'badge badge-on';
     startBtn.classList.add('hidden');
     stopBtn.classList.remove('hidden');
-    info.textContent = '📅 ' + (s.targetDate || '?') + ' · UTC 整点自动发布到 X（每条在对应测算小时发送）';
-    grid.innerHTML = s.scheduled.sort(function(a,b){ return a.hour - b.hour; }).map(function(h){ return '<div class="schedule-item">🕐 ' + String(h.hour).padStart(2,'0') + ':00</div>'; }).join('');
+    info.textContent = '📅 ' + (s.targetDate || '?') + ' · 按时自动发布';
     if (!autoPostPoll) autoPostPoll = setInterval(loadAutoPostStatus, 10000);
   } else {
     badge.textContent = '未启动';
     badge.className = 'badge badge-off';
     startBtn.classList.remove('hidden');
     stopBtn.classList.add('hidden');
-    info.textContent = '生成运势后可启动定时发布，每条在对应的测算小时（UTC）自动发帖';
-    grid.innerHTML = '';
+    info.textContent = '生成运势后可启动定时发布';
     if (autoPostPoll) { clearInterval(autoPostPoll); autoPostPoll = null; }
   }
 }
+
 async function stopAutoPost() {
   await fetch('/api/autopost/stop', { method: 'POST' });
-  var badge = document.getElementById('autopost-badge');
-  badge.textContent = '已停止';
-  badge.className = 'badge badge-off';
+  document.getElementById('autopost-badge').textContent = '已停止';
+  document.getElementById('autopost-badge').className = 'badge badge-off';
   document.getElementById('autopost-start-btn').classList.remove('hidden');
   document.getElementById('autopost-stop-btn').classList.add('hidden');
-  document.getElementById('autopost-info').textContent = '定时已取消。可重新启动';
-  document.getElementById('autopost-schedule').innerHTML = '';
   if (autoPostPoll) { clearInterval(autoPostPoll); autoPostPoll = null; }
-  toast('⏹ 所有定时已取消');
+  toast('⏹ 定时已取消');
 }
 
-// ─── Delete ────────────────────────────────────────────
-async function deletePost(hour) {
-  if (!confirm('删除 ' + String(hour).padStart(2,'0') + ':00 的运势？')) return;
-  var r = await fetch('/api/posts/' + hour, { method: 'DELETE' });
-  if (r.ok) { toast('已删除'); loadPreview(); loadPublishList(); }
+// ─── Tabs ─────────────────────────────────────────────
+function switchTab(name) {
+  ['generate','preview','publish'].forEach(t => {
+    document.getElementById('tab-'+t).classList.toggle('hidden', t !== name);
+  });
+  document.querySelectorAll('.tab').forEach(btn => {
+    btn.classList.toggle('active', btn.textContent.includes(name === 'generate' ? '生成' : name === 'preview' ? '预览' : '发布'));
+  });
+  if (name === 'preview') loadPreview();
+  if (name === 'publish') loadPublishList();
 }
 
-// ─── Preview ───────────────────────────────────────────
-async function loadPreview() {
-  var r = await fetch('/api/posts'); var data = await r.json();
-  var posts = data.posts || [];
-  var grid = document.getElementById('preview-grid');
-  var empty = document.getElementById('preview-empty');
-  var sortBtn = document.getElementById('sort-btn');
-  document.getElementById('preview-date').textContent = '📅 ' + (data.date || '');
-  if (posts.length === 0) { empty.style.display = 'block'; grid.innerHTML = ''; sortBtn.style.display = 'none'; return; }
-  empty.style.display = 'none'; sortBtn.style.display = 'inline';
-  var sorted = posts.slice(); if (!sortAsc) sorted.reverse();
-  grid.innerHTML = sorted.map(function(p){
-    return '<div class="post-card" onclick="viewPost(' + p.hour + ')"><span class="del-btn" onclick="event.stopPropagation();deletePost(' + p.hour + ')">❌</span><h4>🕐 ' + String(p.hour).padStart(2,'0') + ':00</h4><div class="meta">星座: ' + p.zodiacs.join(', ') + '</div><div class="meta">塔罗: ' + p.tarotCards.join(', ') + '</div><div style="font-size:0.8rem;color:#999;margin-top:8px;overflow:hidden;max-height:40px;">' + (p.zh || '').replace(/<[^>]*>/g,'') + '</div></div>';
-  }).join('');
-}
-function toggleSort() { sortAsc = !sortAsc; document.getElementById('sort-btn').textContent = sortAsc ? '🔼 从早到晚' : '🔽 从晚到早'; loadPreview(); }
-async function viewPost(hour) {
-  var r = await fetch('/api/posts/' + hour); var p = await r.json();
-  document.getElementById('preview-grid').parentElement.classList.add('hidden');
-  document.getElementById('sort-btn').style.display = 'none';
-  document.getElementById('post-detail-card').classList.remove('hidden');
-  document.getElementById('post-detail-content').innerHTML = '<h3>🕐 ' + String(p.hour).padStart(2,'0') + ':00</h3><p style="color:#888;">星座: ' + p.zodiacs.join(', ') + ' | 塔罗: ' + p.tarotCards.join(', ') + '</p><h4>🇨🇳 中文</h4><p>' + escapeHtml(p.texts.zh) + '</p><h4>🇺🇸 English</h4><p>' + escapeHtml(p.texts.en) + '</p><h4>🇯🇵 日本語</h4><p>' + escapeHtml(p.texts.ja) + '</p>';
-}
-function closeDetail() { document.getElementById('preview-grid').parentElement.classList.remove('hidden'); document.getElementById('sort-btn').style.display = 'inline'; document.getElementById('post-detail-card').classList.add('hidden'); }
-function escapeHtml(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-
-// ─── Publish ───────────────────────────────────────────
-async function loadPublishList() {
-  var r = await fetch('/api/posts'); var data = await r.json(); var posts = data.posts || [];
-  document.getElementById('publish-list').innerHTML = posts.length === 0
-    ? '<p style="color:#666;text-align:center;padding:40px;">尚未生成运势</p>'
-    : posts.map(function(p){ return '<div class="pub-row"><div><strong>🕐 ' + String(p.hour).padStart(2,'0') + ':00</strong><span style="color:#888;margin-left:12px;">' + p.zodiacs.join(', ') + '</span></div><div><button class="btn btn-secondary btn-sm" onclick="publishHour(' + p.hour + ')">📤 发布</button><span class="pub-del" onclick="deletePost(' + p.hour + ')">❌</span></div></div>'; }).join('');
-}
-async function publishHour(hour) {
-  window._pubBtn = event.target; var btn = window._pubBtn;
-  btn.disabled = true; btn.textContent = '⏳...';
-  try {
-    var r = await fetch('/api/publish/' + hour, { method: 'POST' }); var d = await r.json();
-    btn.textContent = '✅ OK:' + d.ok + ' ❌:' + d.fail;
-    setTimeout(function(){ btn.disabled = false; btn.textContent = '📤 发布'; }, 3000);
-  } catch(e) { btn.textContent = '❌'; btn.disabled = false; }
+// ─── Utils ────────────────────────────────────────────
+function toast(msg) {
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 3000);
 }
 
-loadConfig(); loadAutoPostStatus();
-checkXStatus();
-
+function escapeHtml(s) {
+  return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
 </script>
 </body>
 </html>
